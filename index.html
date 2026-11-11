@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>菜谱本</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/14.0.5/swiper-bundle.min.css">
+<style>
+  :root {
+    --bg: #faf9f7;
+    --panel: #ffffff;
+    --line: #e6e2dc;
+    --ink: #26221e;
+    --ink-soft: #7a736b;
+    --accent: #b5502a;
+    --accent-soft: #f5ebe6;
+    --done: #a8a29a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.6 -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  }
+  body { display: flex; overflow: hidden; }
+
+  /* ── 左栏 ── */
+  #list {
+    width: 300px; flex-shrink: 0;
+    border-right: 1px solid var(--line);
+    background: var(--panel);
+    display: flex; flex-direction: column;
+  }
+  #list-head {
+    padding: 14px 14px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  #list-head h1 {
+    margin: 0 0 10px; font-size: 15px; font-weight: 600;
+    letter-spacing: .02em;
+  }
+  #list-head h1 span { color: var(--ink-soft); font-weight: 400; }
+  #search {
+    width: 100%; padding: 7px 10px;
+    border: 1px solid var(--line); border-radius: 7px;
+    background: var(--bg); color: var(--ink);
+    font: inherit; font-size: 14px; outline: none;
+  }
+  #search:focus { border-color: var(--accent); }
+  #items { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .item {
+    padding: 11px 14px; cursor: pointer;
+    border-bottom: 1px solid var(--line);
+  }
+  .item:hover { background: var(--bg); }
+  .item.on { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+  .item .nm { font-weight: 600; font-size: 14.5px; margin-bottom: 2px; }
+  .item .ing {
+    font-size: 12.5px; color: var(--ink-soft);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .empty { padding: 30px 14px; color: var(--ink-soft); font-size: 13px; text-align: center; }
+
+  /* ── 右栏:固定头 + Swiper 翻页 ── */
+  #detail { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+  .detail-top {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 30px; border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .back {
+    display: none; margin-right: auto; cursor: pointer;
+    color: var(--accent); font-size: 14px; background: none;
+    border: none; padding: 0; font-family: inherit;
+  }
+  .tools { display: flex; gap: 7px; margin-left: auto; }
+  .tool {
+    font-size: 12px; padding: 5px 9px; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 6px;
+    background: var(--panel); color: var(--ink-soft);
+    font-family: inherit; white-space: nowrap;
+  }
+  .tool.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .detail-swiper { flex: 1; min-height: 0; width: 100%; }
+  .swiper-slide {
+    height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 24px 30px 60px;
+  }
+
+  .blank-msg {
+    display: none; flex: 1; align-items: center; justify-content: center;
+    color: var(--ink-soft);
+  }
+  #detail.empty .detail-top { display: none; }
+  #detail.empty .detail-swiper { display: none; }
+  #detail.empty .blank-msg { display: flex; }
+
+  .dish-title { margin: 0 0 4px; font-size: 23px; font-weight: 650; letter-spacing: .01em; }
+  .src { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 22px; }
+
+  h3 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--ink-soft); font-weight: 600;
+    margin: 26px 0 9px; padding-bottom: 5px;
+    border-bottom: 1px solid var(--line);
+  }
+  h3 .clr {
+    float: right; text-transform: none; letter-spacing: 0;
+    cursor: pointer; font-weight: 400; color: var(--ink-soft);
+  }
+  h3 .clr:hover { color: var(--accent); }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+  li {
+    display: flex; gap: 9px; align-items: baseline;
+    padding: 6px 2px; cursor: pointer; border-radius: 5px;
+  }
+  li:hover { background: var(--panel); }
+  .box {
+    flex-shrink: 0; width: 15px; height: 15px; margin-top: 3px;
+    border: 1.5px solid var(--line); border-radius: 4px;
+    position: relative; transition: .12s;
+  }
+  li.done .box { background: var(--accent); border-color: var(--accent); }
+  li.done .box::after {
+    content: ""; position: absolute; left: 4.5px; top: 1px;
+    width: 4px; height: 8px; border: solid #fff;
+    border-width: 0 1.8px 1.8px 0; transform: rotate(42deg);
+  }
+  li.done .tx, li.done .amt, li.done .n { color: var(--done); text-decoration: line-through; }
+
+  .tx { flex: 1; }
+  .amt { color: var(--ink-soft); font-size: 13px; flex-shrink: 0; }
+  .n {
+    flex-shrink: 0; width: 21px; height: 21px; margin-top: 1px;
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 50%; font-size: 11.5px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  li.step { align-items: flex-start; padding: 9px 2px; }
+  .meta {
+    display: inline-block; margin-left: 7px; font-size: 11.5px;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  }
+  .tips { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 15px; }
+  .tips li { cursor: default; padding: 3px 0; display: list-item; list-style: disc; margin-left: 15px; }
+  .tips li:hover { background: none; }
+
+  .multi { font-size: 12px; color: var(--ink-soft); margin: -14px 0 20px; }
+
+  body.big { font-size: 18px; }
+  body.big .dish-title { font-size: 27px; }
+  body.big .amt, body.big .meta { font-size: 15px; }
+
+  /* ── 窄屏:堆叠 ── */
+  @media (max-width: 720px) {
+    #list { width: 100%; border-right: none; }
+    #detail { display: none; }
+    body.reading #list { display: none; }
+    body.reading #detail { display: flex; }
+    .detail-top { padding: 12px 16px; }
+    .swiper-slide { padding: 16px 16px 50px; }
+    .back { display: inline-block; }
+  }
+</style>
+</head>
+<body>
+
+<div id="list">
+  <div id="list-head">
+    <h1>菜谱本 <span id="count"></span></h1>
+    <input id="search" placeholder="搜菜名或食材…" autocomplete="off">
+  </div>
+  <div id="items"></div>
+</div>
+
+<div id="detail" class="empty">
+  <div class="detail-top">
+    <button class="back">← 返回列表</button>
+    <div class="tools">
+      <button class="tool" id="wake">屏幕常亮</button>
+      <button class="tool" id="big">大字</button>
+    </div>
+  </div>
+  <div class="swiper detail-swiper">
+    <div class="swiper-wrapper"></div>
+  </div>
+  <div class="blank-msg">从左侧选一道菜</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/14.0.5/swiper-bundle.min.js"></script>
+<script>
+let DISHES = [];        // 拍平后的菜品列表(每项带 _checked 打钩集合)
+let cur = -1;           // 当前 DISHES 索引
+let CURRENT_LIST = [];  // 当前搜索结果内的 DISHES 索引序列 = Swiper 的 slide 顺序
+let swiper = null;
+let wakeLock = null;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ── 加载 ──
+// 优先读静态 recipes.json(GitHub Pages 等静态托管);读不到再回退本地 serve.py 的 /api/recipes
+fetch("recipes.json")
+  .then(r => r.ok ? r : Promise.reject())
+  .catch(() => fetch("/api/recipes"))
+  .then(r => r.json())
+  .then(data => {
+    data.forEach(video => {
+      const dishes = video["菜品"] || [];
+      dishes.forEach((d, i) => {
+        DISHES.push({
+          ...d,
+          _checked: new Set(),           // 打钩状态存数据层(virtual 回收重建不丢)
+          _src: video._source,
+          _theme: video["视频主题"] || "",
+          _sib: dishes.length > 1 ? `同视频 ${i + 1}/${dishes.length} 道菜` : ""
+        });
+      });
+    });
+    $("#count").textContent = `· ${DISHES.length}`;
+    render();
+    initSwiper();
+  })
+  .catch(e => {
+    $("#items").innerHTML = `<div class="empty">加载失败<br>${esc(e.message)}</div>`;
+  });
+
+// ── 当前搜索结果内的菜(索引序列),左栏和翻页共用 ──
+function visible() {
+  const q = $("#search").value.trim().toLowerCase();
+  const out = [];
+  DISHES.forEach((d, i) => {
+    const ings = (d["食材"] || []).map(x => x["名称"]).filter(Boolean);
+    const hay = (d["菜名"] + " " + ings.join(" ")).toLowerCase();
+    if (!q || hay.includes(q)) out.push(i);
+  });
+  return out;
+}
+
+// ── 左栏列表 ──
+function render() {
+  const q = $("#search").value.trim().toLowerCase();
+  const box = $("#items");
+  let html = "", shown = 0;
+
+  DISHES.forEach((d, i) => {
+    const ings = (d["食材"] || []).map(x => x["名称"]).filter(Boolean);
+    const hay = (d["菜名"] + " " + ings.join(" ")).toLowerCase();
+    if (q && !hay.includes(q)) return;
+    shown++;
+    html += `<div class="item ${i === cur ? "on" : ""}" data-i="${i}">
+      <div class="nm">${esc(d["菜名"] || "未命名")}</div>
+      <div class="ing">${esc(ings.slice(0, 4).join(" · ")) || "—"}</div>
+    </div>`;
+  });
+
+  box.innerHTML = shown ? html : `<div class="empty">没有匹配的菜谱</div>`;
+  box.querySelectorAll(".item").forEach(el =>
+    el.onclick = () => open(+el.dataset.i));
+}
+
+$("#search").oninput = () => { render(); rebuildSlides(); };
+
+// ── 纯函数:菜谱对象 → 详情 HTML(Swiper slide 和其它地方共用)──
+function dishHTML(d) {
+  const ing = d["食材"] || [], sea = d["调料"] || [];
+  const stp = d["步骤"] || [], tip = d["小贴士"] || [];
+  const done = d._checked;
+
+  const row = (x, k) => `<li data-k="${k}" class="${done.has(k) ? "done" : ""}">
+      <span class="box"></span>
+      <span class="tx">${esc(x["名称"])}</span>
+      <span class="amt">${esc(x["用量"] === "未提及" ? "常量" : x["用量"])}</span>
+    </li>`;
+
+  return `
+    <h2 class="dish-title">${esc(d["菜名"] || "未命名")}</h2>
+    <div class="src">${esc(d._src)}${d._theme && d._theme !== d["菜名"] ? " · " + esc(d._theme) : ""}</div>
+    ${d._sib ? `<div class="multi">${esc(d._sib)}</div>` : ""}
+
+    ${ing.length ? `<h3>食材 <span class="clr" data-c="i">清空</span></h3>
+      <ul data-cat="i">${ing.map((x, k) => row(x, "i" + k)).join("")}</ul>` : ""}
+
+    ${sea.length ? `<h3>调料 <span class="clr" data-c="s">清空</span></h3>
+      <ul data-cat="s">${sea.map((x, k) => row(x, "s" + k)).join("")}</ul>` : ""}
+
+    ${stp.length ? `<h3>步骤 <span class="clr" data-c="p">清空</span></h3>
+      <ul data-cat="p">${stp.map((s, k) => {
+        const m = s["时长或火候"], key = "p" + k;
+        return `<li class="step ${done.has(key) ? "done" : ""}" data-k="${key}">
+          <span class="box"></span>
+          <span class="n">${esc(s["序号"] ?? k + 1)}</span>
+          <span class="tx">${esc(s["描述"])}${m && m !== "未提及" ? `<span class="meta">${esc(m)}</span>` : ""}</span>
+        </li>`;
+      }).join("")}</ul>` : ""}
+
+    ${tip.length ? `<h3>小贴士</h3>
+      <ul class="tips">${tip.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+  `;
+}
+
+// ── Swiper 虚拟翻页 ──
+function renderSlide(dishIndex) {
+  return `<div class="swiper-slide" data-di="${dishIndex}">${dishHTML(DISHES[dishIndex])}</div>`;
+}
+
+function initSwiper() {
+  const list = visible();
+  CURRENT_LIST = list;
+
+  swiper = new Swiper(".detail-swiper", {
+    virtual: { slides: list, renderSlide, cache: true },   // 只渲染当前及相邻 slide
+    resistanceRatio: 0.85,   // 边界橡皮筋阻尼
+    threshold: 4,            // 小位移不误判为翻页
+    speed: 320,
+    on: {
+      slideChange() {
+        const di = CURRENT_LIST[swiper.activeIndex];
+        if (di != null) setCur(di);
+      }
+    }
+  });
+
+  if (list.length) { showBlank(false); setCur(list[0]); }
+  else showBlank(true, "还没有菜谱");
+}
+
+// 搜索变化时重建 slide 列表
+function rebuildSlides() {
+  if (!swiper) return;
+  const list = visible();
+  CURRENT_LIST = list;
+  swiper.virtual.slides = list;
+  swiper.virtual.update(true);
+
+  if (!list.length) { showBlank(true, "没有匹配的菜谱"); return; }
+  showBlank(false);
+  const di = list.includes(cur) ? cur : list[0];
+  swiper.slideTo(list.indexOf(di), 0);
+  setCur(di);
+}
+
+// 左栏 / 抽屉点击某道菜:跳到对应 slide
+function open(dishIndex) {
+  document.body.classList.add("reading");   // 窄屏进入详情
+  const idx = CURRENT_LIST.indexOf(dishIndex);
+  if (idx === -1) return;
+  swiper.update();                          // 详情区可能刚从 display:none 变可见
+  swiper.slideTo(idx, 0);
+  setCur(dishIndex);
+}
+
+// 同步 cur 状态 + 左栏高亮(不重建列表,保留滚动位置)
+function setCur(dishIndex) {
+  cur = dishIndex;
+  document.querySelectorAll("#items .item").forEach(el =>
+    el.classList.toggle("on", +el.dataset.i === dishIndex));
+}
+
+function showBlank(on, msg) {
+  const D = $("#detail");
+  D.classList.toggle("empty", on);
+  if (on && msg) D.querySelector(".blank-msg").textContent = msg;
+}
+
+// ── 打钩:事件委托挂在 swiper 上(virtual 回收重建也不用重绑)──
+$(".detail-swiper").addEventListener("click", e => {
+  const slide = e.target.closest(".swiper-slide[data-di]");
+  if (!slide) return;
+  const di = +slide.dataset.di;
+  const set = DISHES[di]._checked;
+
+  const clr = e.target.closest(".clr");
+  if (clr) {
+    slide.querySelectorAll(`ul[data-cat="${clr.dataset.c}"] li`).forEach(li => {
+      li.classList.remove("done");
+      set.delete(li.dataset.k);
+    });
+    return;
+  }
+
+  const li = e.target.closest("li[data-k]");
+  if (li) {
+    const k = li.dataset.k;
+    if (set.has(k)) { set.delete(k); li.classList.remove("done"); }
+    else { set.add(k); li.classList.add("done"); }
+  }
+});
+
+// ── 固定头部按钮(只绑一次)──
+$(".back").onclick = () => document.body.classList.remove("reading");
+
+const bigBtn = $("#big");
+bigBtn.onclick = () => {
+  document.body.classList.toggle("big");
+  bigBtn.classList.toggle("on", document.body.classList.contains("big"));
+  if (swiper) swiper.update();
+};
+
+const wakeBtn = $("#wake");
+wakeBtn.onclick = async () => {
+  if (wakeLock) {
+    await wakeLock.release(); wakeLock = null;
+    wakeBtn.classList.remove("on"); wakeBtn.textContent = "屏幕常亮";
+  } else {
+    try {
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.onrelease = () => { wakeLock = null; };
+      wakeBtn.classList.add("on");
+    } catch {
+      wakeBtn.textContent = "不支持常亮";
+    }
+  }
+};
+
+// 切页面回来时重新申请常亮
+document.addEventListener("visibilitychange", async () => {
+  if (wakeLock === null && document.visibilityState === "visible") {
+    if (wakeBtn.classList.contains("on")) {
+      try { wakeLock = await navigator.wakeLock.request("screen"); } catch {}
+    }
+  }
+});
+
+// ── 桌面端键盘左右方向键 → Swiper 翻页 ──
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  if (!swiper) return;
+  if (e.key === "ArrowRight") swiper.slideNext();
+  if (e.key === "ArrowLeft") swiper.slidePrev();
+});
+</script>
+</body>
+</html>

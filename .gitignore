@@ -1,0 +1,13 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# 源视频(体积大,demo 不需要,数据已在 recipe_*.json / recipes.json 里)
+*.MP4
+*.mp4
+*.mov
+*.MOV
+
+# macOS
+.DS_Store
